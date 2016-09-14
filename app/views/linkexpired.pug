@@ -1,0 +1,15 @@
+extends layout
+
+block content
+	.row
+		.col-md-6.col-md-offset-3
+			h1.text-center.header Sorry, your request expired!
+			p.lead.text-center
+			| The link associated with your #{action} request has expired. To send a new email, please 
+				form(method="post" action="/emailregen")#emailregen.inline-form
+					input(type='hidden' name='token' value=action.token)#token.inline-input.otherinput
+					input(type='hidden' name='type' value=action.type)#type.inline-input.otherinput
+					input(type='hidden' name='label' value=action.label)#label.inline-input.otherinput
+					input#userinfo.userinfo(type='text' name='userinfo' value='')
+					input.csrf#csrf(type='hidden' name='_csrf' value=csrfToken)
+					button(type='submit').inline-btn click here

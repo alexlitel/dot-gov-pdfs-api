@@ -1,0 +1,38 @@
+extends layout
+
+mixin tableRow(label, description)
+	tr
+		td: b #{label}
+		td #{description}
+
+block content
+	.row
+		.col-md-6.col-md-offset-3
+			h1.text-center.header About
+			p.lead
+				| Welcome to the .gov PDFs API. This API is based on the #[a(href='http://www.github.com/dotgovpdfs') @govpdfs Twitter bot], but instead of instead of using a sometimes questionable Google Alerts RSS feed for PDF files on .gov sites. Unlike that project, this API uses data scraped directly from Google results to surface a larger quantity of data in a more accurate and timelier manner. Currently, the API's dataset extends only for the past 24 hours. New results are generated once daily, unless there is an error with retrieving the information.
+			p.lead
+				| If you would like access to the API, #[a(href='/register') register for an account]. If you would like to implement this project on your own end, visit the #[a(href='https://www.github.com/alexlitel/dot-gov-pdfs-api') Github repo] for the source. If there are any other questions or comments, feel free to #[a(href='mailto:alexlitelatgmaildotcom') email me].
+	.row
+		.col-md-6.col-md-offset-3
+			h2.text-center.subhead How to Use the API
+			p.text
+				| All API calls require a #[b valid API key], and use the #[code api/v1/?] with parameters thereafter. If you haven't yet registered for an account, please visit the registration link above to do so. You can also use #[a(href='/login') login with your account] and use this site to test out the API. There is presently no rate limiting though that will likely change in the future.
+			p.text
+				| For all parameters except the API key, the API allows for partial word-based &#40; i.e., 'houston' in 'houston tx' &#41; or exact matches &#40; i.e., 'houston tx' in 'houston tx' &#41;. API requests return up to 50 results at a time, along with a count of the total number of results. You can chain multiple parameters of the same name to return matches for multiple possible values in the same field &#40; i.e., if you wanted to search for results on 'whitehouse.gov' and 'senate.gov' &#41;.
+			p.text
+				| To find possible options for the first couple of non-API parameters below, please refer to #[a(href='https://github.com/alexlitel/dotgovpdfs/blob/master/app/parseobj.js') the .gov domain dataset] or #[a(href='https://github.com/alexlitel/dotgovpdfs/blob/master/app/parseobj.js') this very long list of potential options]. If the admin has enabled the email distribution option, you should receive a daily roundup of in your inbox after the scraper script runs.
+			h4.subsubhead Parameters
+			table.table.table-bordered
+				+tableRow('apiKey', 'Your API key. Required for API usage. The only required parameter.')
+				+tableRow('type', 'Domain type. Valid options: city, county, fed, statelocal and tribal.')
+				+tableRow('identifier', 'Shorthand abbrevations for .gov domains.')
+				+tableRow('agency', 'Agency associated with domain. For federal domains only.')
+				+tableRow('url_full', 'Full URLs.')
+				+tableRow('url_domain', 'Entire domain, includes both hostname and subdomain.')
+				+tableRow('url_sub', 'Subdomains.')
+				+tableRow('url_host', 'Hostnames.')
+				+tableRow('title', 'Document titles.')
+				+tableRow('schedule', 'Calendars/schedules, documents that will typically always be in results.')
+				+tableRow('offset', 'Starting position for returned results. Default is 0.')
+			p.text If you are logged in, you can also head over to the #[a(href='/settings') settings page] to check your current API key or generate a new one, change your password or delete your account.

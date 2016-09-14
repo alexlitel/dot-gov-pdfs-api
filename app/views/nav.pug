@@ -1,0 +1,14 @@
+nav.navbar.navbar-default.nav-custom
+  .container-fluid
+    .navbar-header.nav-title
+      a.navbar-brand.nav-brand(href='/') .gov PDFs API
+    ul.nav.navbar-nav.nav-links-row
+        li.nav-item: a.nav-link(href='/about') About
+        if !currentUser
+          li.nav-item: a.nav-link(href='/register') Register
+        if currentUser
+          li.nav-item: a.nav-link(href='/testapi') Test API
+          li.nav-item: a.nav-link(href='/settings') Settings
+          li.nav-item: a.nav-link(href='/logout') Log out
+        else
+          li.nav-item: a.nav-link(href='login') Login

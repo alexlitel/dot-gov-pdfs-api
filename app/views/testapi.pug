@@ -1,0 +1,38 @@
+extends layout
+
+mixin formElem(obj)
+  -
+    if (!obj.label) obj.label = obj.id.substr(0,1).toUpperCase() + obj.id.slice(1);
+    if (!obj.name) obj.name = obj.id;
+  .form-group.api-form-row
+    label.form-label.api-form-label(for=obj.id) #{obj.label}
+    input.form-control.api-form-field(type='text' name=obj.name, id=obj.id, required=obj.required)
+
+
+block content
+    -
+      elems = [
+      {id: 'key', label: 'API key (required)', required: true, name: 'apiKey'},
+      {id: 'type'},
+      {id: 'url', label: 'Full URL', name: 'url_full'},
+      {id: 'domain', name: 'url_domain'},
+      {id: 'hostname', name: 'url_host'},
+      {id: 'subdomain', name: 'url_sub'},
+      {id: 'identifier'},
+      {id: 'agency'},
+      {id: 'schedule'},
+      {id: 'title'},
+      {id: 'offset'}
+      ];
+    .row
+        .col-md-6.col-md-offset-3
+            h1.text-center.header Test API
+            form#apiform.user-form.api-form
+                each el in elems
+                  +formElem(el)
+                input#userinfo.userinfo(type='text' name='userinfo' value='')
+                input.csrf#csrf(type='hidden' name='_csrf' value=csrfToken)
+                button.btn.btn-primary.form-submit-btn(type='submit') Test API
+    .row
+        .col-md-6.col-md-offset-3
+            pre.pre-scrollable.api-text#apitext

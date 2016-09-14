@@ -1,0 +1,229 @@
+body {
+    font-size: 16px;
+}
+
+form {
+    margin: 2rem auto;
+}
+
+.userinfo,
+.emailchecked,
+.otherinput {
+    visibility: hidden;
+    height: 1px;
+}
+
+h1.header,
+h2.subhead {
+    padding: 10px;
+    margin: 10px auto;
+    border-bottom: 4px #444 solid;
+}
+
+.nav-custom {
+    display: flex;
+    border-radius: 0;
+}
+
+.form-submit-btn {
+    display: block;
+    margin: 40px auto;
+}
+
+.main {
+    float: none;
+    margin: 0 auto;
+    max-width: 1400px;
+}
+
+.main> div {
+    float: none !important;
+}
+
+.api-text {
+    margin-top: 40px;
+    white-space: pre-wrap;
+    min-height: 200px;
+}
+
+
+.api-form-row {
+    display: flex;
+    justify-content: space-around;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.api-form-label {
+    flex: 1;
+    font-size: 1.5rem;
+    font-weight: 300;
+}
+
+.api-form-field {
+    flex: 1;
+    width: auto;
+}
+
+.subsubhead {
+    margin: 20px 0;
+}
+
+.sublabel {
+    color: #333;
+    display: block;
+    font-weight: 300;
+    font-size: 90%;
+}
+
+.warning-error,
+.settings-alert {
+    border: 3px solid;
+    display: flex;
+    align-items: center
+}
+
+.warning-error {
+    color: red;
+}
+
+.settings-alert {
+    color: #4CAF50;
+}
+
+.warning-error-label {
+    background: red;
+    color: white;
+    padding: 6px;
+    font-weight: 600;
+    border-radius: 3px;
+    margin-right: 10px;
+}
+
+.warning-error-text a {
+    color: #c10000;
+    border-bottom: 2px dotted;
+    padding: 2px;
+}
+
+.warning-error-text a:hover,
+.warning-error-text a:focus {
+    text-decoration: none;
+    border-bottom: 2px solid;
+    padding: 2px;
+}
+
+.post-form-row {
+    margin: 30px auto;
+}
+
+.nav-custom .nav-brand,
+.nav-links-row .nav-item .nav-link {
+    color: #555;
+    font-size: 2rem;
+    margin: 10px;
+    padding: 10px;
+    transition: 250ms ease;
+}
+
+.nav-link {
+    border-bottom: 2px solid;
+}
+
+.nav-custom .nav-brand {
+    border: 4px solid;
+}
+
+.nav-custom .nav-brand:focus,
+.nav-links-row .nav-item .nav-link:focus,
+.nav-custom .nav-brand:hover,
+.nav-links-row .nav-item .nav-link:hover {
+    color: red;
+}
+
+.settings-tabs {
+    display: flex;
+    justify-content: center;
+}
+
+
+.settings-tabs-tab {
+    margin: auto 15px;
+}
+
+.settings-tabs-tab-link {
+    border-radius: 0;
+    border-bottom: 2px solid transparent;
+    color: #555;
+    background: transparent;
+}
+
+.settings-tabs-tab.active .settings-tabs-tab-link,
+.settings-tabs-tab.active .settings-tabs-tab-link:focus,
+.settings-tabs-tab.active .settings-tabs-tab-link:hover {
+    border-bottom-color: #555;
+    border-radius: 0;
+    color: #555;
+    background: transparent;
+}
+
+
+.tab-pane .header {
+    margin: 55px auto 40px;
+}
+
+.tab-pane .form-submit-btn {
+    margin: 20px auto;
+}
+
+.settings-form {
+    margin-top: 20px;
+}
+
+.manage-api-text {
+    margin-top: 40px;
+}
+
+.generate-key .settings-form {
+    margin: 0 auto;
+}
+
+.tab-container {
+    margin-top: 50px;
+}
+
+
+
+.form-title {
+    padding: 5px 0 20px;
+}
+
+
+.message-text {
+    margin: 30px auto;
+}
+
+.forgot-password {
+    margin: 50px auto;
+}
+
+.inline-form,
+.inline-btn,
+.inline-input {
+    display: inline;
+    font-family: inherit;
+    font-size: inherit;
+    font-weight: inherit;
+    border: none;
+}
+
+.inline-btn {
+    background: none;
+    padding: 0;
+    color: #337ab7;
+    text-decoration: none;
+}
+
+.inline-btn:hover, .inline-btn:active, .inline-btn:focus {
+    text-decoration: underline;
+}

@@ -1,0 +1,76 @@
+extends layout
+
+mixin formField(obj)
+    .form-group.settings-form-row
+        label.form-label(for=obj.id) #{obj.label}
+        input.form-control(type=(!!obj.type ? obj.type : 'text') name=obj.name, id=obj.id, required)
+
+mixin formEl(method, action, id, className, text)
+    form.user-form.settings-form(method=method action=action id=id class=className)
+        block
+        input.userinfo(type='text' id=id + 'userinfo' value='')
+        input.csrf#csrf(type='hidden' name='_csrf' value=csrfToken)
+        button.btn.btn-primary.form-submit-btn(type='submit') #{text}
+
+
+mixin tabPanel(id, active, text)
+    .tab-pane.active(id=id )
+        .row
+            .col-sm-12
+                .tab-container
+                    h1.text-center.form-title #{text}
+                    block
+
+block content
+    .row
+        .col-md-6.col-md-offset-3
+            h1.text-center.header Settings
+            ul.nav.nav-pills.settings-tabs#settingstabs
+                li.settings-tabs-tab( class=(activeOption === 'changepassword') ? 'active' : '')
+                    a.settings-tabs-tab-link(href='/settings/changepassword', aria-controls='changepassword') Change Password
+                li.settings-tabs-tab( class=(activeOption === 'changeemail') ? 'active' : '')
+                    a.settings-tabs-tab-link(href='/settings/changeemail', aria-controls='changeemail') Change Email
+                if emailDist
+                    li.settings-tabs-tab( class=(activeOption === 'emailoptions') ? 'active' : '')
+                        a.settings-tabs-tab-link(href='/settings/emailoptions', aria-controls='emailoptions') Manage Email Options
+                li.settings-tabs-tab( class=(activeOption === 'manageapi') ? 'active' : '')
+                    a.settings-tabs-tab-link(href='/settings/manageapi', aria-controls='manageapi') Manage API Key
+                li.settings-tabs-tab( class=(activeOption === 'deleteaccount') ? 'active' : '')
+                    a.settings-tabs-tab-link(href='/settings/deleteaccount', aria-controls='deleteaccount') Delete Account
+            .tab-content
+                if (activeOption === 'changepassword')
+                    +tabPanel('changepassword', true, 'Change Password')
+                        .sublabel Password must be at least 10 characters, and include one of each of the following: lowercase letter, uppercase letter, non-alphanumeric symbol and number.
+                        +formEl('post', '/changepassword', 'changepasswordform', 'post-form change-password', 'Change Password')
+                            +formField({id: 'oldpw', name: 'oldPw', label: 'Old Password', type: 'password'})
+                            +formField({id: 'newpw', name: 'newPw', label: 'New Password', type: 'password'})
+                            +formField({id: 'confirmnewpw', name: 'confirmNewPw', label: 'Confirm Password', type: 'password'})
+                        .text-center.forgot-password Forget your password? #[a(href='/forgotpassword') Click here].
+                if (activeOption === 'changeemail')
+                    +tabPanel('changeemail', false, 'Change Email')
+                        .sublabel Confirmation of the email change will be sent to both your current and new email accounts.
+                        +formEl('post', '/changeemail', 'changeemailform', 'post-form change-email', 'Change Email')
+                            +formField({id: 'oldemail', name: 'oldEmail', label: 'Old Email', type: 'email'})
+                            +formField({id: 'newemail', name: 'newEmail', label: 'New Email', type: 'email'})
+                            +formField({id: 'confirmnewemail', name: 'confirmNewEmail', label: 'Confirm Email', type: 'email'})
+                            input#emailchecked.otherinput.emailchecked(type='checkbox' name='emailchecked')
+                if (emailDist && activeOption === 'emailoptions')
+                    +tabPanel('emailoptions', false, 'Email Options')
+                        .text-center.manage-email-options
+                            span Your current email options:
+                            .well#keytext #{apiOptions}
+                        .sublabel Specify the filtering options, if any, you would like to use for PDF notification emails. Must be URL query string (i.e., #[i val1=whatever&val2=whatever]) with API params (does not need key). Empty values are valid and will convert the mail options value to null. See about page for more info.
+                        +formEl('post', '/emailoptions', 'emailoptionsform', 'post-form email-options', 'Submit')
+                            +formField({id: 'emailoptionsform', name: 'emailOptions', label: 'Email Options'})
+                if (activeOption === 'manageapi')
+                    +tabPanel('manageapi', false, 'Manage API')
+                        .text-center.manage-api-text
+                            span Your current API key is:
+                            .well#keytext #{apiKey}
+                        +formEl('post', '/generatekey', 'generatekeyform', 'post-form generate-key', 'Generate New Key')
+                if (activeOption === 'deleteaccount')
+                    +tabPanel('deleteaccount', false, 'Delete Account')
+                        .sublabel Please fill out the following to delete your account.
+                        +formEl('post', '/deleteaccount', 'deleteaccountform', 'post-form delete-account', 'Delete Account')
+                            +formField({id: 'email', name: 'email', label: 'Email', type: 'email'})
+                            +formField({id: 'confirmemail', name: 'confirmEmail', label: 'Confirm Email', type: 'email'})

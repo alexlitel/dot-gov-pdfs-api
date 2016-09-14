@@ -1,0 +1,10 @@
+if !!message && message.hasOwnProperty('type') && message.hasOwnProperty('text')
+	.row
+		.col-md-6.col-md-offset-3
+			if message.type === 'error'
+				.alert.warning-error(role='alert')
+					span.warning-error-label Error
+					span.warning-error-text !{message.text}
+			else
+				.alert.settings-alert(role='alert')
+					span.settings-alert-text !{message.text}

@@ -1,0 +1,21 @@
+extends layout
+
+block content
+  .row
+    .col-md-6.col-md-offset-3
+      h1.text-center.header Sign Up
+      form(method='POST' action='/register').post-form.user-form.register#registerform
+        div.form-group.post-form-row
+          label.control-label(for='email') Email:
+          input#email.form-control(type='email' placeholder='name@email.com' name='email' required)
+        div.form-group.post-form-row
+          label.control-label(for='pw') Password:
+            span.sublabel Must be at least 10 characters, and include one of each of the following: lowercase letter, uppercase letter, non-alphanumeric symbol and number.
+          input#pw.form-control(type='password' name='password' required)
+        div.form-group.post-form-row
+          label.control-label(for='confirmpw') Confirm Password:
+          input#confirmpw.form-control(type='password' name='confirmPassword' required)
+        input#userinfo.otherinput.userinfo(type='text' name='userinfo' value='')
+        input#csrf(type='hidden' name='_csrf' value=csrfToken)
+        input#emailchecked.otherinput.emailchecked(type='checkbox' name='emailchecked')
+        button.btn.btn-primary.form-submit-btn#registersubmit(type='submit') Sign up

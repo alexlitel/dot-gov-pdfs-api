@@ -1,0 +1,17 @@
+extends layout
+
+block content
+  .row
+    .col-md-6.col-md-offset-3
+      h1.text-center.header Log In
+      form(method='POST' action='/login').user-form.login.post-form#loginform
+        div.form-group.post-form-row
+          label.control-label(for='email') Email:
+          input#email.form-control(type='email' name='email')
+        div.form-group.post-form-row
+          label.control-label(for='pw') Password:
+          input#pw.form-control(type='password' name='password')
+        input#userinfo.userinfo(type='text' name='userinfo' value='')
+        input.csrf#csrf(type='hidden' name='_csrf' value=csrfToken)
+        button.btn.btn-primary.form-submit-btn#loginsubmit(type='submit') Log In
+      .text-center.forgot-password Forget your password? #[a(href='/forgotpassword') Click here].

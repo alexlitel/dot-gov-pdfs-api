@@ -1,0 +1,24 @@
+extends layout
+
+block content
+  - var foo = 'yeah'
+  .row
+      .col-md-6.center-block.col-md-offset-3
+        h1.header.text-center.bg-primary debug
+        form(method="POST" action='/debug')
+          div.form-group
+            label(for='key') API key
+            input#key.form-control(type='text', placeholder='00000000-0000-0000-0000-000000000000' name='key' required)
+          div.form-group
+            label(for='pw') Password:
+            input#pw.form-control(type='text' name='password')
+          div.form-group
+            label(for='pw2') Confirm Password:
+            input#pw2.form-control(type='text' name='confirmPassword')
+            input#userreg.userreg(type='hidden' name='userreg')
+            input#csrf.csrf(type='hidden' name='_csrf' value=csrfToken)
+          button.btn.btn-primary.form-submit-btn(type='submit') Test API
+        pre.pre-scrollable.api-text#apitext
+
+
+  

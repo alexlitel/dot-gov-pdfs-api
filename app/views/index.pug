@@ -1,0 +1,12 @@
+extends layout
+
+block content
+	.row
+		.col-md-6.col-md-offset-3
+			h1.header.text-center Welcome
+			if !currentUser
+				p.lead
+					| Welcome to the .gov PDFs API, which is based on the #[a(href='http://www.github.com/dotgovpdfs') @govpdfs Twitter bot]. Visit the #[a(href='/about') about page] to learn more information. If you would like access to the API, #[a(href='/register') register for an account]. Or if you already have an account, you can #[a(href='login') login] to access the API dataset using this site or manage your account.
+			if currentUser
+				p.lead
+					| Welcome to the .gov PDFs API, which is based on the #[a(href='http://www.github.com/dotgovpdfs') @govpdfs Twitter bot]. Use the #[a(href='/testapi') test API page] to experiment with the API. Visit the #[a(href='/about') about page] for information on the API and helpful tips. You can also use the #[a(href='/settings') settings page] to manage your account.

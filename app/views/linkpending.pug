@@ -1,0 +1,28 @@
+extends layout
+
+
+block content
+	.row
+		-
+			if (action.type === 'userreg')
+				if (adminConfirm)
+					text = 'Emails containing a confirmation link needed for account verification have been sent to the email you used for registration and the administrator.'
+				else
+					text = 'An email containing a confirmation link needed for account verification has been sent to the email you used for registration.'
+			else 
+				text = action.type === 'confirmaccount' ? action.label === 'user' ? 'you need an administrator to verify the account before approval' : 'the user has not yet verified their account' : action.label === 'old' ? 'you need to click on the link in the email sent to your new address' : 'you need to click on the link in the email sent to your current address'
+		.col-md-6.col-md-offset-3
+			h1.text-center.header #{action.title}
+			div.lead
+				if (action.type === 'userreg' || action.type === 'confirmaccount' && action.label === 'user')
+					| #{text} Please check your inbox for a confirmation and click on the link therein. If you want to send a new email, please 
+					form(method="post" action="/emailregen")#emailregen.inline-form
+						input(type='hidden'  name='token' value=currentUser)#token.inline-input.otherinput
+						input(type='hidden' name='type' value='confirmaccount' )#type.inline-input.otherinput
+						input(type='hidden'  name='label' value='user')#label.inline-input.otherinput
+						input.csrf#csrf(type='hidden' name='_csrf' value=csrfToken)
+						button(type='submit').inline-btn click here
+					| .
+				else 
+					| Your #{action.text} request is pending because #{text}.
+			
