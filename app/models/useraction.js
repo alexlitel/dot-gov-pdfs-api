@@ -26,7 +26,7 @@ let userActionSchema = new Schema({
     type: {
         type: String,
         required: true,
-        match: /^(confirmaccount|delete|emailchange|passwordreset)$/i,
+        match: /^(confirmaccount|deleteaccount|emailchange|passwordreset)$/i,
         lowercase: true,
         trim: true
     },
@@ -73,12 +73,12 @@ userActionSchema.add({
 userActionSchema.statics.sendEmail = function(doc, action) {
     if (action === 'save') {
         if (doc.type === 'confirmaccount') return doc.label === 'admin' ? emailHelpers.verificationMessage(doc.label, doc.value, doc.token, doc.valueTwo) : emailHelpers.verificationMessage(doc.label, doc.value, doc.token);
-        if (doc.type === 'delete') return emailHelpers.deleteMessage(doc.value, doc.token);
-        if (doc.type === 'emailchange') return doc.label === 'new' ? emailHelpers.emailChangeMessage(doc.target, doc.value, doc.token) : emailHelpers.emailChangeMessage(doc.target, doc.value, doc.valueTwo);
+        if (doc.type === 'deleteaccount') return emailHelpers.deleteMessage(doc.value, doc.token);
+        if (doc.type === 'emailchange') return doc.label === 'new' ? emailHelpers.emailChangeMessage(doc.label, doc.value, doc.token) : emailHelpers.emailChangeMessage(doc.label, doc.value, doc.token, doc.valueTwo);
         if (doc.type === 'passwordreset') return emailHelpers.passwordResetMessage(doc.value, doc.token);
     } else if (action === 'remove') {
         if (doc.type === 'confirmaccount' && !doc.isNested) return emailHelpers.confirmationMessage(doc.value, 'Account Verification', 'verified your account. You are now free to use the .gov PDFs API');
-        if (doc.type === 'delete') return emailHelpers.confirmationMessage(doc.value, 'Account Deletion', 'deleted your .gov PDFs API account. Your information has been removed from the .gov PDFs database. If you would like to use the product at a later period, you will need to reregister');
+        if (doc.type === 'deleteaccount') return emailHelpers.confirmationMessage(doc.value, 'Account Deletion', 'deleted your .gov PDFs API account. Your information has been removed from the .gov PDFs database. If you would like to use the product at a later period, you will need to reregister');
         if (doc.type === 'emailchange' && !doc.isNested) return emailHelpers.confirmationMessage(doc.value, 'Email Change', 'updated your email. You can now log into the .gov PDFs API using this email address');
     }
 };
@@ -90,17 +90,24 @@ userActionSchema.methods.testTime = function() {
 userActionSchema.statics.complete = function(token, type, secondary) {
     return UserAction
         .findOne({
-            [secondary ? 'secondaryAction.token' : token]: token,
-            [secondary ? 'secondAction.type' : type]: type
+            $or: [{
+                'secondaryAction.token': token,
+                'secondaryAction.type': type
+            }, {
+                token: token,
+                type: type
+            }]
         })
         .exec()
         .then(function(action) {
+            console.log('action');
             if (!action) {
                 throw new Error('No matching action');
             } else {
                 if (action.testTime()) {
-                    (secondary ? action.secondaryAction.status = true : action.status = true);
-                    action.save().then(function(action) {
+                    if (secondary) action.secondaryAction.status = true;
+                    else action.status = true;
+                    return action.save().then(function(action) {
                         if (secondary) {
                             if (action.status && action.secondaryAction.status) return Promise.resolve([true, token, type]);
                             else return Promise.resolve(['pending', token, type]);
@@ -109,7 +116,7 @@ userActionSchema.statics.complete = function(token, type, secondary) {
                             else return Promise.resolve([true, token, type]);
                         }
                     }).catch(function(err) {
-                        return Promiser.reject(err);
+                        return Promise.reject(err);
                     });
                 } else return Promise.resolve([false, token, type]);
             }
@@ -123,7 +130,7 @@ userActionSchema.statics.purgeOld = function() {
     let dateLimit = new Date();
     dateLimit.setDate(dateLimit.getDate() - 5);
     return Promise.all([
-            User.remove({
+            mongoose.model('User').remove({
                 verified: false,
                 created_at: {
                     $lte: dateLimit
@@ -150,8 +157,11 @@ userActionSchema.statics.regenerateToken = function(token, type, secondary) {
     return UserAction
         .findOne({
             $or: [{
-                [secondary ? 'secondaryAction.token' : token]: token,
-                [secondary ? 'secondaryAction.type' : type]: type
+                'secondaryAction.token': token,
+                'secondaryAction.type': type
+            }, {
+                token: token,
+                type: type
             }, {
                 userId: token
             }]
@@ -170,7 +180,7 @@ userActionSchema.statics.regenerateToken = function(token, type, secondary) {
             return action
                 .save()
                 .then(function(action) {
-                    return Promise.resolve([action.type, action.token, secondary]);
+                    return Promise.resolve([action.token, action.type, secondary]);
                 });
 
         })
@@ -183,11 +193,13 @@ userActionSchema.statics.regenerateToken = function(token, type, secondary) {
 
 userActionSchema.pre('save', function(next) {
     let uAction = this;
+
     if (uAction.isNew && !uAction.isNested) {
+        let regex = uAction._id + (!!uAction.secondaryAction ? '|' + uAction.secondaryAction._id : '');
         UserAction
             .remove({
                 _id: {
-                    $not: new RegExp(uAction._id)
+                    $not: new RegExp(regex)
                 },
                 userId: uAction.userId,
                 isNested: false
@@ -201,29 +213,18 @@ userActionSchema.pre('save', function(next) {
         uAction.date = date.setHours(date.getHours() + 48);
     }
 
-    if (uAction.isNew && !uAction.value && !uAction.label) {
-        User.findById(uAction.userId)
-            .exec()
-            .then(function(user) {
-                uAction.value = user.email;
-                userActionSchema.statics.sendEmail('save', uAction);
-                return next();
-            });
-    } else {
-        if (uAction.isNew || (uAction.isModified('token') && uAction.isModified('date'))) userActionSchema.statics.sendEmail(uAction, 'save');
-        return next();
-    }
+
+    if (uAction.isNew || (uAction.isModified('token') && uAction.isModified('date'))) userActionSchema.statics.sendEmail(uAction, 'save');
+    return next();
+
 });
 
 userActionSchema.post('save', function(doc) {
     let uAction = doc;
-
     if (!uAction.isNested) {
-        if (!!uAction.secondAction && (uAction.isModified('user status') || uAction.secondAction.isModified('user status'))) {
-            if (uAction.status && uAction.secondAction.status) {
-                uAction.remove();
-            }
-        } else if (uAction.isModified('user status') && uAction.status) uAction.remove();
+        if (!!uAction.secondaryAction && !!uAction.status && !!uAction.secondaryAction.status) {
+            uAction.remove();
+        } else if (!!uAction.status) uAction.remove();
     }
 
 });
@@ -232,13 +233,13 @@ userActionSchema.post('remove', function(doc) {
     let uAction = doc;
 
     if (!uAction.isNested && uAction.type !== 'passwordreset') userActionSchema.statics.sendEmail(uAction, 'remove');
-    if (!uAction.nested && uAction.type === 'delete') User.deleteAccount(uAction.userId);
+    if (!uAction.nested && uAction.type === 'delete') mongoose.model('User').deleteAccount(uAction.userId);
     if (!uAction.isNested && !!uAction.label) {
-        User.findById(uAction.userId)
+        mongoose.model('User').findById(uAction.userId)
             .exec()
             .then(function(user) {
                 if (uAction.type === 'confirmaccount') user.verified = true;
-                else if (uAction.type === 'emailchange') user.email = uAction.value;
+                else if (uAction.type === 'emailchange') user.email = uAction.valueTwo;
                 user.save();
             });
     }

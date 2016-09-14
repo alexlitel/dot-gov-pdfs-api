@@ -12,7 +12,7 @@ const host = appConfig.hostname;
 
 const confirmationMessage = (email, actionTitle, actionText) => {
     let confirmationMsg = transporter.templateSender({
-        subject: '.gov pdfs: Successful {{Action}}',
+        subject: '.gov pdfs: Successful {{actionTitle}}',
         text: 'Hi there,\n\n You have successfullly {{actionText}}.'
     });
 
@@ -35,7 +35,7 @@ const deleteMessage = (email, token) => {
     deletionMsg({
         to: email
     }, {
-        actionLink: `https://${host}/emailaction/deleteaccount/${token}`
+        actionLink: `${appConfig.env.includes('prod') ? 'https' : 'http'}://${host}/emailaction/deleteaccount/${token}`
     });
 };
 
@@ -51,7 +51,7 @@ const emailChangeMessage = (target, email, token, newEmail) => {
     eChangeMsg({
         to: email
     }, {
-        actionLink: `https://${host}/emailaction/emailchange/${token}/${target}`,
+        actionLink: `${appConfig.env.includes('prod') ? 'https' : 'http'}://${host}/emailaction/emailchange/${token}/${target}`,
         newEmail: target === 'new' ? email : newEmail
     });
 };
@@ -80,7 +80,7 @@ const passwordResetMessage = (email, token) => {
     pResetMsg({
         to: email
     }, {
-        actionLink: `https://${host}/emailaction/passwordreset/${token}`
+        actionLink: `${appConfig.env.includes('prod') ? 'https' : 'http'}://${host}/emailaction/passwordreset/${token}`
     });
 };
 
@@ -130,7 +130,7 @@ const verificationMessage = (target, email, token, user) => {
         to: email
     }, {
         email: target === 'user' ? email : user,
-        actionLink: `https://${host}/emailaction/confirmaccount/${token}/${target}`
+        actionLink: `${appConfig.env.includes('prod') ? 'https' : 'http'}://${host}/emailaction/confirmaccount/${token}/${target}`
     });
 };
 

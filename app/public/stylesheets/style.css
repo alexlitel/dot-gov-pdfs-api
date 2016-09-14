@@ -227,3 +227,11 @@ h2.subhead {
 .inline-btn:hover, .inline-btn:active, .inline-btn:focus {
     text-decoration: underline;
 }
+
+.confirm-title {
+    font-size: 2em;
+}
+
+.success-text {
+    font-size: 1.8rem;
+}

@@ -90,7 +90,12 @@ userSchema.statics.changePassword = function(id, oldPass, newPass) {
             if (!user) {
                 throw new Error('User not found');
             }
-            if (oldPass !== 'resetnopass') {
+            if (oldPass === 'resetnopass') {
+                user.password = newPass;
+                user.save();
+                return Promise.resolve(user);
+            }
+            else {
                 return bcrypt
                     .compareAsync(oldPass, user.password)
                     .then(function(result) {
@@ -101,19 +106,12 @@ userSchema.statics.changePassword = function(id, oldPass, newPass) {
                         } else throw new Error();
                     }).catch(function(err) {
                         let userErr = new Error('Passwords do not match');
-                        userErr.status = 404;
                         return Promise.reject(userErr);
                     });
-
-            } else if (oldPass = 'resetnopass') {
-                user.password = newPass;
-                user.save();
-                return Promise.resolve(user);
             }
         })
         .catch(function(err) {
             let userErr = new Error('User not found');
-            userErr.status = 404;
             return Promise.reject(userErr);
         });
 };
@@ -180,19 +178,46 @@ userSchema.statics.testEmail = function(email) {
 
 };
 
-userSchema.pre('update', function(next) {
+userSchema.pre('save', function(next) {
     let user = this;
-    if (user.isModified('user password') || user.isNew) {
+
+    if (user.isModified('password') || user.isNew) {
         if (user.password.length < 10 || /^(.{0,9}|[^0-9]*|[^A-Z]*|[^a-z]*|[a-zA-Z0-9]*)$/.test(user.password)) {
             let err = new Error('password not long enough');
             return next(err);
         }
+    }
 
-        bcrypt
-            .hashAsync(user.password, 14)
-            .then(function(hash) {
-                user.password = hash;
-                return next();
+    if (user.isModified('verified')) {
+        user.apiKey = uuid.v4();
+        return next();
+    }
+
+    if (user.isNew) {
+        UserAction.create({
+            userId: user._id,
+            type: 'confirmaccount',
+            label: 'user',
+            value: user.email,
+            secondaryAction: config.dbConfig.adminConfirm && !!config.dbConfig.adminEmail ? new UserAction({
+                userId: user._id,
+                type: 'confirmaccount',
+                label: 'admin',
+                value: config.dbConfig.adminEmail,
+                valueTwo: user.email,
+                isNested: true
+            }) : null
+        })
+            .then(function(uAction) {
+                return bcrypt
+                    .hashAsync(user.password, 14)
+                    .then(function(hash) {
+                        user.password = hash;
+                        return next();
+                    })
+                    .catch(function(err) {
+                        return next(err);
+                    });
             })
             .catch(function(err) {
                 return next(err);
@@ -202,85 +227,14 @@ userSchema.pre('update', function(next) {
 
 });
 
-userSchema.pre('save', function(next) {
-    let user = this;
-
-    if (user.isModified('user password') || user.isNew) {
-        if (user.password.length < 10 || /^(.{0,9}|[^0-9]*|[^A-Z]*|[^a-z]*|[a-zA-Z0-9]*)$/.test(user.password)) {
-            let err = new Error('password not long enough');
-            return next(err);
-        }
-        if (config.dbConfig.adminConfirm && !!config.dbConfig.adminEmail) {
-            UserAction.create({
-                userId: user._id,
-                type: 'confirmaccount',
-                label: 'user',
-                value: user.email,
-                secondaryAction: new UserAction({
-                    userId: user._id,
-                    type: 'confirmaccount',
-                    label: 'admin',
-                    value: config.dbConfig.adminEmail,
-                    valueTwo: user.email,
-                    isNested: true
-                })
-            })
-                .then(function(uAction) {
-                    return bcrypt
-                        .hashAsync(user.password, 14)
-                        .then(function(hash) {
-                            user.password = hash;
-                            return next();
-                        })
-                        .catch(function(err) {
-                            return next(err);
-                        });
-                })
-                .catch(function(err) {
-                    return next(err);
-                });
-
-        } else {
-            UserAction.create({
-                userId: user._id,
-                type: 'confirmaccount',
-                label: 'user',
-                value: user.email
-            })
-                .then(function(uAction) {
-                    return bcrypt
-                        .hashAsync(user.password, 14)
-                        .then(function(hash) {
-                            user.password = hash;
-                            return next();
-                        })
-                        .catch(function(err) {
-                            return next(err);
-                        });
-                })
-                .catch(function(err) {
-                    return next(err);
-                });
-        }
-
-    }
-
-    if (user.isModified('user verified')) {
-        user.apiKey = uuid.v4();
-        return next();
-    }
-
-    
-});
-
 userSchema.post('save', function(doc) {
     let user = doc;
 
-    if (user.isModified('user password')) {
+    if (user.isModified('password')) {
         emailHelpers.passwordChangeMessage(user.email);
     }
 });
 
-let User = mongoose.model('user', userSchema);
+const User = mongoose.model('User', userSchema);
 
 module.exports = User;

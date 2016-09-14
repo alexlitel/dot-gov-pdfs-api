@@ -10,7 +10,7 @@ block content
 				else
 					text = 'An email containing a confirmation link needed for account verification has been sent to the email you used for registration.'
 			else 
-				text = action.type === 'confirmaccount' ? action.label === 'user' ? 'you need an administrator to verify the account before approval' : 'the user has not yet verified their account' : action.label === 'old' ? 'you need to click on the link in the email sent to your new address' : 'you need to click on the link in the email sent to your current address'
+				text = action.type === 'confirmaccount' ? action.label === 'user' ? 'You need an administrator to verify the account before approval' : 'the user has not yet verified their account' : action.label === 'old' ? 'you need to click on the link in the email sent to your new address' : 'you need to click on the link in the email sent to your current address'
 		.col-md-6.col-md-offset-3
 			h1.text-center.header #{action.title}
 			div.lead

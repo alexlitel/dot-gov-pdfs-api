@@ -2,12 +2,15 @@
 const express = require('express');
 const Promise = require('bluebird');
 let Router = express.Router();
+const uuid = require('uuid');
 const User = require('../models/user');
 const UserAction = require('../models/useraction');
 const Link = require('../models/link');
 const mid = require('../middleware');
 const config = require('../config');
 const emailHelpers = require('../helpers/mailer');
+
+const dbUrl = config.dbConfig.url;
 
 
 class FlashMsg {
@@ -110,20 +113,23 @@ Router.post('/changeemail', mid.isLoggedIn, function(req, res, next) {
                         }
                     }) : Promise.resolve())
                     .then(function() {
-                        UserAction.create({
+                        return UserAction.create({
                             userId: req.session.userId,
                             type: 'emailchange',
                             label: 'old',
                             value: req.body.oldEmail,
+                            valueTwo: req.body.newEmail,
                             secondaryAction: new UserAction({
                                 userId: req.session.userId,
                                 type: 'emailchange',
                                 label: 'new',
                                 value: req.body.newEmail,
+                                isNested: true
                             })
                         }).then(function(user) {
                             req.session.message = new FlashMsg('Emails have been sent to the current and new addresses you specified.', 'success');
                         }).catch(function(err) {
+                            console.log(err);
                             req.session.message = new FlashMsg('error with generating your email change request.');
                         }).finally(function() {
                             res.redirect('/settings/changeemail');
@@ -168,21 +174,21 @@ Router.post('/changepassword', mid.isLoggedIn, function(req, res, next) {
 });
 
 Router.get('/confirmation/:action/:token', function(req, res, next) {
+    let title, text;
+    if (req.params.action.includes('confirmaccount')) title = 'Account Confirmation';
+    if (req.params.action.includes('deleteaccount')) title = 'Account Deletion';
+    if (req.params.action.includes('passwordreset')) title = 'Password Reset';
+    if (req.params.action.includes('emailchange')) title = "Email Change";
+
+    if (req.params.action === 'passwordreset') text = 'reset your password.';
+    if (req.params.action === 'emailchange') text = 'changed your email address.';
+    if (req.params.action === 'deleteaccount') text = 'deleted your account.';
+    if (req.params.action === 'confirmaccount') text = 'confirmed your account. You can now use all the functionality on the site.';
+
     let action = {};
-    if (req.params.action.includes('confirmaccount')) action.title = 'Account Confirmation';
-    if (req.params.action.includes('delete')) action.title = 'Account Deletion';
-    if (req.params.action.includes('passwordreset')) action.title = 'Password Reset';
-    if (req.params.action.includes('emailchange')) action.title = "Email Change";
-
-    action.text = `sent a new ${emailType.toLowerCase()} request email to your email address`;
-    if (req.params.action === 'resetpassword') action.text = 'reset your password.';
-    if (req.params.action === 'emailchange') action.text = 'changed your email address.';
-    if (req.params.action === 'delete') action.text = 'deleted your account.';
-    if (req.params.action === 'confirmaccount') action.text = 'confirmed your account. You can now use all the functionality on the site.';
-
-    action.title = req.params.action.includes('sent') ? `New ${action.title} Request Email Sent` : `${action.title} Successful`;
-    action.text = req.params.action.includes('sent') && !action.text ?
-        `sent a new ${action.title.toLowerCase()} request email to your email address` : `${action.text} A confirmation email will be sent to your inbox`;
+    action.text = req.params.action.includes('sent') && !text ?
+        `sent a new ${title.toLowerCase()} request email to your email address` : `${text} A confirmation email will be sent to your inbox`;
+    action.title = req.params.action.includes('sent') ? `${title} Request Email Sent` : `${title} Successful`;
 
     res.render('confirmation', {
         title: 'Confirmation',
@@ -191,16 +197,40 @@ Router.get('/confirmation/:action/:token', function(req, res, next) {
 });
 
 Router.post('/deleteaccount', mid.isLoggedIn, function(req, res, next) {
-    UserAction.create({
-        userId: req.session.userId,
-        type: 'delete'
-    }).then(function(uAction) {
-        res.session.message = new FlashMsg('A request to delete your account has been emailed to you. To complete the action, please click the link inside.', 'success');
+    if (!req.body.email || !req.body.confirmEmail) {
+        req.session.message = new FlashMsg('you did not fill out all required inputs. Please try again.');
         res.redirect('/settings/deleteaccount');
-    }).catch(function(err) {
-        res.session.message = new FlashMsg('there was an error with processing your account deletion request. Please try again.');
+    }
+    if (!req.body.email !== !req.body.confirmEmail) {
+        req.session.message = new FlashMsg('your inputs did not match. Please try again.');
         res.redirect('/settings/deleteaccount');
-    });
+    }
+
+    User
+        .findById(req.session.userId)
+        .then(function(user) {
+            if (req.body.email !== user.email) {
+                req.session.message = new FlashMsg('you did not enter the correct email. Please try again.');
+                res.redirect('/settings/deleteaccount');
+            }
+            UserAction.create({
+                userId: req.session.userId,
+                type: 'deleteaccount',
+                value: user.email
+            })
+                .then(function(uAction) {
+                    req.session.message = new FlashMsg('A request to delete your account has been emailed to you. To complete the action, please click the link inside.', 'success');
+                    res.redirect('/settings/deleteaccount');
+                })
+                .catch(function(err) {
+                    throw new Error(err);
+                });
+        })
+        .catch(function(err) {
+            req.session.message = new FlashMsg('there was an error with processing your account deletion request. Please try again.');
+            res.redirect('/settings/deleteaccount');
+
+        });
 });
 
 
@@ -211,26 +241,35 @@ Router.get('/emailaction/:type/:id/:target*?', function(req, res, next) {
         err.status = 403;
         next(err);
     } else if (req.params.type && req.params.id) {
-        if (req.params.type === 'passwordreset') {
-            res.redirect('/resetpassword/' + req.params.id);
-        } else {
-            UserAction
-                .complete(req.params.id, req.params.type, (!!req.params.target && (req.params.target === 'old' || req.params.target === 'admin')))
-                .spread(function(completion, token, type) {
-                    if (completion === true) {
-                        if (type === 'confirmaccount') res.redirect('/success');
-                        else if (type === 'passwordreset') res.redirect(`/resetpassword/${token}`);
-                        else res.redirect(`/confirmation/${type}/${token}`);
-                    } else if (completion === 'pending') res.redirect(`/linkpending/${type}/${req.params.target}`);
-                    else if (!completion) res.redirect(`/linkexpired/${type}/${token + (!!req.params.target ? '/' + req.params.target : '')}`);
+        UserAction
+            .complete(req.params.id, req.params.type, (!!req.params.target && (req.params.target === 'old' || req.params.target === 'admin')))
+            .spread(function(completion, token, type) {
+                if (completion === true) {
+                    if (type === 'confirmaccount' && req.params.target === 'user') res.redirect('/success');
+                    else if (type === 'passwordreset') {
+                        req.session.tempPassToken = uuid.v4();
+                        res.redirect(`/resetpassword/${token}/${req.session.tempPassToken}`);
+                    } else if (type === 'deleteaccount') {
+                        if (req.session) {
+                            req.session.destroy(function(err) {
+                                if (err) {
+                                    next(err);
+                                }
+                                res.redirect(`/confirmation/${type}/${token}`);
+                            });
+                        } else {
+                            res.redirect(`/confirmation/${type}/${token}`);
+                        }
+                    } else res.redirect(`/confirmation/${type}/${token}`);
+                } else if (completion === 'pending') res.redirect(`/linkpending/${type}/${req.params.target}`);
+                else if (!completion) res.redirect(`/linkexpired/${type}/${token + (!!req.params.target ? '/' + req.params.target : '')}`);
 
-                })
-                .catch(function(err) {
-                    let error = new Error('Invalid email action');
-                    error.status = 403;
-                    next(err);
-                });
-        }
+            })
+            .catch(function(err) {
+                let error = new Error('Invalid email action');
+                error.status = 403;
+                next(err);
+            });
     }
 });
 
@@ -254,10 +293,8 @@ Router.post('/emailregen', function(req, res, next) {
         next(err);
     }
 
-
-
-    UserAction.regenerateToken(req.body.type, req.body.token, (!!req.body.label && (req.body.label === 'old' || req.body.label === 'admin')))
-        .spread(function(type, secondary) {
+    UserAction.regenerateToken(req.body.token, req.body.type, (!!req.body.label && (req.body.label === 'old' || req.body.label === 'admin')))
+        .spread(function(token, type, secondary) {
             res.redirect(`/confirmation/${type}sent/${token}`);
         })
         .catch(function(err) {
@@ -311,7 +348,7 @@ Router.post('/forgotpassword', function(req, res, next) {
                 } else {
                     let uAction = new UserAction({
                         userId: user._id,
-                        actionType: 'passwordreset',
+                        type: 'passwordreset',
                         value: req.body.email
                     });
                     uAction
@@ -321,6 +358,7 @@ Router.post('/forgotpassword', function(req, res, next) {
                             res.redirect('/forgotpassword');
                         })
                         .catch(function(err) {
+                            console.log(err);
                             req.session.message = new FlashMsg('there\'s been an error with requesting your password reset token.');
                             res.redirect('/forgotpassword');
                         });
@@ -328,6 +366,7 @@ Router.post('/forgotpassword', function(req, res, next) {
                 }
             })
             .catch(function(err) {
+
                 req.session.message = new FlashMsg('there was an unknown error with your password reset request.');
                 res.redirect('/forgotpassword');
             });
@@ -482,31 +521,52 @@ Router.post('/register', function(req, res, next) {
 });
 
 
-Router.get('/resetpassword/:token', mid.parseMessages, function(req, res, next) {
+Router.get('/resetpassword/:token/:tempToken', mid.parseMessages, function(req, res, next) {
+    if (req.params.tempToken !== req.session.tempPassToken) {
+        let error = new Error('Invalid reset password key');
+        error.status = 403;
+        next(error);
+    }
+
     res.render('resetpassword', {
         title: 'Reset Password',
         userToken: req.params.token,
-        csrfToken: req.csrfToken()
+        tempToken: req.params.tempToken,
+        csrfToken: req.csrfToken(),
+        message: req.message
     });
 });
 
 Router.post('/resetpassword', function(req, res, next) {
+    if (!req.body.tempToken || !req.body.token || !req.session.tempPassToken) {
+        let error = new Error('Invalid reset password action');
+        next(error);
+    }
+
     if (!req.body.password || !req.body.password) {
         req.session.message = new FlashMsg('you did not fill out all required fields. Please try again.');
-        res.redirect('/register');
+        res.redirect(`/resetpassword/${req.body.token}/${req.body.tempToken}`);
     }
 
     if (req.body.password !== req.body.confirmPassword) {
         req.session.message = new FlashMsg('your passwords did not match. Please try again.');
-        res.redirect('/register');
+        res.redirect(`/resetpassword/${req.body.token}/${req.body.tempToken}`);
     }
+
+
+    let pass = req.body.password;
+    let token = req.body.token;
+    let tempToken = req.body.tempToken;
 
     User.changePassword(req.body.token, 'resetnopass', req.body.password)
         .then(function(user) {
-            res.redirect('/confirmation/passwordreset');
+            console.log(user);
+            res.redirect(`/confirmation/passwordreset/${token}`);
         })
         .catch(function(err) {
-            next(err);
+            console.log('this officla err', err);
+            req.session.message = new FlashMsg('there was an unknown error with your password reset request. Please try again.');
+            res.redirect(`/resetpassword/${token}/${tempToken}`);
         });
 
 });
@@ -519,7 +579,7 @@ Router.get('/settings', mid.isLoggedIn, function(req, res, next) {
 Router.get('/settings/:option', mid.isLoggedIn, mid.parseMessages, function(req, res, next) {
     res.render('settings', {
         title: 'Settings',
-        emailDist: true || config.appConfig.emailDist,
+        emailDist: config.appConfig.emailDist,
         apiKey: req.key,
         apiOptions: req.apiOptions,
         activeOption: req.params.option,
@@ -547,9 +607,5 @@ Router.get('/testapi', mid.isLoggedIn, function(req, res, next) {
         }
     });
 });
-
-
-
-
 
 module.exports = Router;
