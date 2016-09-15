@@ -560,7 +560,6 @@ Router.post('/resetpassword', function(req, res, next) {
 
     User.changePassword(req.body.token, 'resetnopass', req.body.password)
         .then(function(user) {
-            console.log(user);
             res.redirect(`/confirmation/passwordreset/${token}`);
         })
         .catch(function(err) {

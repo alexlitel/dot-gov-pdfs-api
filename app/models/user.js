@@ -52,7 +52,7 @@ let userSchema = new Schema({
 
 
 
-userSchema.statics.authenticate = function(email, pass, cb) {
+userSchema.statics.authenticate = function(email, pass) {
     return User.findOne({
             email: {
                 $regex: new RegExp(email, 'i')
@@ -92,17 +92,26 @@ userSchema.statics.changePassword = function(id, oldPass, newPass) {
             }
             if (oldPass === 'resetnopass') {
                 user.password = newPass;
-                user.save();
-                return Promise.resolve(user);
-            }
-            else {
+                return user.save().then(function(user) {
+                        return Promise.resolve(user);
+                    })
+                    .catch(function(err) {
+                        throw new Error(err);
+                    });
+
+            } else {
                 return bcrypt
                     .compareAsync(oldPass, user.password)
                     .then(function(result) {
                         if (result === true) {
                             user.password = newPass;
-                            user.save();
-                            return Promise.resolve(user);
+                            return user.save().then(function(user) {
+                                    return Promise.resolve(user);
+                                })
+                                .catch(function(err) {
+                                    throw new Error(err);
+                                });
+
                         } else throw new Error();
                     }).catch(function(err) {
                         let userErr = new Error('Passwords do not match');
@@ -117,12 +126,12 @@ userSchema.statics.changePassword = function(id, oldPass, newPass) {
 };
 
 
-userSchema.statics.deleteAccount = function(id, confirm, cb) {
+userSchema.statics.deleteAccount = function(id) {
     User.findByIdAndRemove(id)
-        .exec()
+    .exec()
         .then(function(user) {
             if (!user) throw new Error();
-            else Promise.resolve(true);
+            else return true;
         })
         .catch(function(err) {
             let userErr = new Error('User not found');
@@ -131,7 +140,7 @@ userSchema.statics.deleteAccount = function(id, confirm, cb) {
         });
 };
 
-userSchema.statics.generateNewKey = function(id, cb) {
+userSchema.statics.generateNewKey = function(id) {
     return User.findById(id)
         .exec()
         .then(function(user) {
@@ -181,47 +190,47 @@ userSchema.statics.testEmail = function(email) {
 userSchema.pre('save', function(next) {
     let user = this;
 
-    if (user.isModified('password') || user.isNew) {
+    if (user.isModified('user password') || user.isNew) {
         if (user.password.length < 10 || /^(.{0,9}|[^0-9]*|[^A-Z]*|[^a-z]*|[a-zA-Z0-9]*)$/.test(user.password)) {
             let err = new Error('password not long enough');
             return next(err);
         }
-    }
 
-    if (user.isModified('verified')) {
-        user.apiKey = uuid.v4();
-        return next();
-    }
-
-    if (user.isNew) {
-        UserAction.create({
-            userId: user._id,
-            type: 'confirmaccount',
-            label: 'user',
-            value: user.email,
-            secondaryAction: config.dbConfig.adminConfirm && !!config.dbConfig.adminEmail ? new UserAction({
-                userId: user._id,
-                type: 'confirmaccount',
-                label: 'admin',
-                value: config.dbConfig.adminEmail,
-                valueTwo: user.email,
-                isNested: true
-            }) : null
-        })
-            .then(function(uAction) {
-                return bcrypt
-                    .hashAsync(user.password, 14)
-                    .then(function(hash) {
-                        user.password = hash;
+        bcrypt
+            .hashAsync(user.password, 14)
+            .then(function(hash) {
+                user.password = hash;
+                if (user.isNew) {
+                    UserAction.create({
+                        userId: user._id,
+                        type: 'confirmaccount',
+                        label: 'user',
+                        value: user.email,
+                        secondaryAction: config.dbConfig.adminConfirm && !!config.dbConfig.adminEmail ? new UserAction({
+                            userId: user._id,
+                            type: 'confirmaccount',
+                            label: 'admin',
+                            value: config.dbConfig.adminEmail,
+                            valueTwo: user.email,
+                            isNested: true
+                        }) : null
+                    }).then(function() {
                         return next();
-                    })
-                    .catch(function(err) {
-                        return next(err);
                     });
+                } else {
+                    return next();
+                }
             })
             .catch(function(err) {
                 return next(err);
             });
+
+    } else if (user.isModified('verified')) {
+        user.apiKey = uuid.v4();
+        return next();
+    } else {
+        console.log('notign matters');
+        return next();
     }
 
 

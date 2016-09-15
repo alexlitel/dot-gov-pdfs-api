@@ -6,8 +6,9 @@ mongoose.Promise = Promise;
 const Link = require('../models/link');
 const Domain = require('../models/domain');
 const User = require('../models/user');
+const UserAction = require('../models/useraction');
 const emailDist = require('../config/app').emailDist;
-
+const resultsMsg = require('../helpers/mailer').resultsMessage;
 const dbUrl = require('../config/database').url;
 
 const parseResults = (results) => {
@@ -55,16 +56,17 @@ const parseResults = (results) => {
             });
         })
         .then(function() {
-            return User.purgeOld();
+            return UserAction.purgeOld();
         })
         .then(function() {
             if (emailDist === true) {
                 return User
-                        .find({ verified: true }, '+email +apiOptions')
+                        .find({ verified: true }, '+email +mailOptions')
+                        .lean()
                         .exec()
                         .then(function(users) {
                             return Promise.each(users, function(user) {
-                                return fooFunc(user.email, user.apiOptions, results);
+                                return resultsMsg(user.email, user.mailOptions);
                             });
                         })
                         .catch(function(item) {

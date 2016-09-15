@@ -231,17 +231,18 @@ userActionSchema.post('save', function(doc) {
 
 userActionSchema.post('remove', function(doc) {
     let uAction = doc;
-
-    if (!uAction.isNested && uAction.type !== 'passwordreset') userActionSchema.statics.sendEmail(uAction, 'remove');
-    if (!uAction.nested && uAction.type === 'delete') mongoose.model('User').deleteAccount(uAction.userId);
-    if (!uAction.isNested && !!uAction.label) {
-        mongoose.model('User').findById(uAction.userId)
-            .exec()
-            .then(function(user) {
-                if (uAction.type === 'confirmaccount') user.verified = true;
-                else if (uAction.type === 'emailchange') user.email = uAction.valueTwo;
-                user.save();
-            });
+    if (!uAction.isNested) {
+        if (uAction.type !== 'passwordreset') userActionSchema.statics.sendEmail(uAction, 'remove');
+        if (uAction.type === 'delete') mongoose.model('User').deleteAccount(uAction.userId);
+        if (!!uAction.label) {
+            mongoose.model('User').findById(uAction.userId)
+                .exec()
+                .then(function(user) {
+                    if (uAction.type === 'confirmaccount') user.verified = true;
+                    else if (uAction.type === 'emailchange') user.email = uAction.valueTwo;
+                    user.save();
+                });
+        }
     }
 });
 

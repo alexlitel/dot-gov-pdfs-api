@@ -90,7 +90,7 @@ const resultsMessage = (email, options) => {
         text: 'Hi there,\n\n Here is the today\'s round up of items {{results}}.'
     });
 
-    Link.genEmailText(options)
+    return Link.genEmailText(options)
         .then(function(results) {
             let strSend = [];
             results.forEach(function(item, i) {
