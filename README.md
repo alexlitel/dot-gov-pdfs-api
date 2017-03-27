@@ -1,4 +1,4 @@
-#.gov pdfs api
+# .gov pdfs api
 
 This project is API (including web interface for user management/API testing) inspired by my [@govpdfs Twitter bot](https://github.com/alexlitel/dotgovpdfs), which tweets out links to (hopefully) new PDFs on the .gov TLD. Unlike the Twitter bot, which reads a potentially specious Google Reader feed as its source, the API uses a different methodology to extract directly from Google searches to surface a larger quantity of results in a timelier and more accurate manner. For now, I have not deployed a public-facing version of the API, but that may change in the future.
 
